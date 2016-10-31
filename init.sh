@@ -21,10 +21,6 @@ function install_base_packages {
     configure_sudo
 }
 
-function install_user_packages {
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get install -q -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" libpam-systemd neovim powerline python-powerline mc bash-completion awscli htop tmux
-}
 
 function install_app_packages {
     export DEBIAN_FRONTEND=noninteractive
@@ -35,19 +31,49 @@ function install_app_packages {
 }
 
 function add_users {
-    useradd -m -s /bin/bash -u 54321 -G sudo habarnam
-    mkdir -p /home/habarnam/.ssh
-    chmod 700 /home/habarnam/.ssh
-    echo "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBATB9Su5K2N5EOKSeYHdecIDqYnq0kM3QyCOsSziMn8rDHR1pls5WDTvVl4/fg7W9OsWexg1HVKHXfTXmTOh7hE=" >> /home/habarnam/.ssh/authorized_keys
-    echo "ecdsa-sha2-nistp521 AAAAE2VjZHNhLXNoYTItbmlzdHA1MjEAAAAIbmlzdHA1MjEAAACFBAEsd9sZcNWOlzTIX9VTSFbY3V3aGtkEtfPU3XO3C2lDFL5ORQFws85eQ4mtw5TxfBEmYBItSXCBBEKBYgywbCL2AQH1NueikJUV6K8lyQ4qxKU8wW0H5PDXHbELXo2pCDzgADJbN2CKaPaBVpq/2klVW736euwJvy4xWZY9cjsDeRzlcw==" >> /home/habarnam/.ssh/authorized_keys
+    test -d "users" || { echo "No users."; exit 1; }
 
-    chmod 600 /home/habarnam/.ssh/authorized_keys
-    chown -R habarnam: /home/habarnam/.ssh
+    for _username in $( ls "users" ); do
+        _userinitscript="users/${_username}/init.sh"
+		_userprofilescript="users/${_username}/profile.sh"
+        test -f "${_userinitscript}" || { echo "No user init script for '${_username}'."; continue; }
 
-    # dotfiles
-    sudo -u habarnam /bin/bash -c "curl -C - -f https://codeload.github.com/mariusor/dotfiles/tar.gz/debian-basic | tar -C /home/habarnam --strip 1 -zxf - "
+        source "${_userinitscript}" 
 
-    install_user_packages
+		add_user 
+    done
+}
+
+function add_user {
+	create_user
+	install_user_packages
+	install_user_profile
+	configure_ssh
+}
+
+function install_user_profile {
+	test -f "${_userprofilescript}" && source "${_userprofilescript}"
+}
+
+function create_user {
+    useradd -m -s "${_usershell}" -u "${_userid}" -G "${_usergroups}" "${_username}"
+}
+
+function configure_ssh {
+    _sshdir="${_userhome}/.ssh"
+    test -d "${_sshdir}" || sudo -u ${_username} mkdir -m 700 -p "${_sshdir}"
+
+    for _sshkey in $_userkeys; do
+        echo "${_sshkey}" >> "${_sshdir}/authorized_keys"
+    done
+
+    chmod 600 "${_sshdir}/authorized_keys"
+    chown -R ${_username}: "${_sshdir}"
+}
+
+function install_user_packages {
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get install -q -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" "${_userpackages}"
 }
 
 function configure_sudo {
@@ -65,7 +91,6 @@ function configure_nginx {
 function configure_php-fpm {
     echo "error_log = syslog" >> /etc/php/7.0/fpm/conf.d/99-log-to-syslog.ini
 }
-# script start
 
 function main {
     update_debian
@@ -77,4 +102,5 @@ function main {
     install_app_packages
 }
 
+# script start
 main 
