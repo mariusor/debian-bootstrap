@@ -1,8 +1,8 @@
 #!/bin/bash
 
 function update_debian {
-    configure_apt 
-    export DEBIAN_FRONTEND=noninteractive 
+    configure_apt
+    export DEBIAN_FRONTEND=noninteractive
     apt-get update -q
     apt-get upgrade
 
@@ -24,23 +24,23 @@ function install_base_packages {
 
 function install_app_packages {
     export DEBIAN_FRONTEND=noninteractive
-    apt-get install -q -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" git nginx php-fpm php-pgsql php-mbstring php-intl composer certbot 
+    apt-get install -q -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" git nginx php-fpm php-pgsql php-mbstring php-intl composer certbot
 
-    configure_nginx 
+    configure_nginx
     configure_php-fpm
 }
 
 function add_users {
-    test -d "users" || { echo "No users."; exit 1; }
+    test -d "./users" || { echo "No users."; exit 1; }
 
-    for _username in $( ls "users" ); do
-        _userinitscript="users/${_username}/init.sh"
-		_userprofilescript="users/${_username}/profile.sh"
-        test -f "${_userinitscript}" || { echo "No user init script for '${_username}'."; continue; }
+    for _userpath in "./users/*" ); do
+        _userinitscript="${_userpath}/init.sh"
+        _userprofilescript="${_userpath}/profile.sh"
+        test -f "${_userinitscript}" || { echo "No user init script for '${_userpath#./users/}'."; continue; }
 
-        source "${_userinitscript}" 
+        source "${_userinitscript}"
 
-		add_user 
+        add_user
     done
 }
 
@@ -61,9 +61,9 @@ function create_user {
 
 function configure_ssh {
     _sshdir="${_userhome}/.ssh"
-    test -d "${_sshdir}" || sudo -u ${_username} mkdir -m 700 -p "${_sshdir}"
+    test -d "${_sshdir}" || sudo -u "${_username}" mkdir -m 700 -p "${_sshdir}"
 
-    for _sshkey in $_userkeys; do
+    for _sshkey in "$_userkeys[@]"; do
         echo "${_sshkey}" >> "${_sshdir}/authorized_keys"
     done
 
@@ -97,10 +97,10 @@ function main {
 
     install_base_packages
 
-    add_users 
+    add_users
 
     install_app_packages
 }
 
 # script start
-main 
+main
