@@ -33,7 +33,7 @@ function install_app_packages {
 function add_users {
     test -d "./users" || { echo "No users."; exit 1; }
 
-    for _userpath in "./users/*" ); do
+    for _userpath in "./users/*"; do
         _userinitscript="${_userpath}/init.sh"
         _userprofilescript="${_userpath}/profile.sh"
         test -f "${_userinitscript}" || { echo "No user init script for '${_userpath#./users/}'."; continue; }
