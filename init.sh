@@ -14,7 +14,6 @@ function configure_apt {
 }
 
 function install_base_packages {
-
     export DEBIAN_FRONTEND=noninteractive
     apt-get install -q -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" openssh-server sudo gnupg curl man less
 
@@ -24,10 +23,7 @@ function install_base_packages {
 
 function install_app_packages {
     export DEBIAN_FRONTEND=noninteractive
-    apt-get install -q -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" git nginx php-fpm php-pgsql php-mbstring php-intl composer certbot
-
-    configure_nginx
-    configure_php-fpm
+    apt-get install -q -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" git certbot
 }
 
 function add_users {
@@ -81,15 +77,6 @@ function configure_sudo {
     chmod 0440 /etc/sudoers.d/99-sudo-no-pass
     # remove if fails visudo check
     /usr/sbin/visudo -c || rm /etc/sudoers.d/99-sudo-no-pass
-}
-
-function configure_nginx {
-    echo "error_log syslog:server=unix:/dev/log;" >> /etc/nginx/conf.d/99-log-to-journal.conf
-    echo "access_log syslog:server=unix:/dev/log;" >> /etc/nginx/conf.d/99-log-to-journal.conf
-}
-
-function configure_php-fpm {
-    echo "error_log = syslog" >> /etc/php/7.0/fpm/conf.d/99-log-to-syslog.ini
 }
 
 function main {
